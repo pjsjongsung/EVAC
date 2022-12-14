@@ -79,7 +79,7 @@ def __largest(image):
     return new_cc_mask
 
 # generate training data
-def __data_gen(file_list, label_list, training=False, model_type='evnet'):
+def __data_gen(file_list, label_list, training=False):
     """ Data generator.
     Parameters
     ----------
@@ -100,8 +100,11 @@ def __data_gen(file_list, label_list, training=False, model_type='evnet'):
         The 4D denoised DWI data.
     """
     
-    random.shuffle(file_list)
-    for file_name, label_name in zip(file_list, label_list):
+    idx_list = list(range(0, len(file_list)))
+    random.shuffle(idx_list)
+    for idx in range(len(file_list)):
+        file_name = file_list[idx_list[idx]]
+        label_name = label_list[idx_list[idx]]
         image_data, affine = load_nifti(file_name)
         image_data = __normalize(image_data)
         label_data, _ = load_nifti(label_name)
@@ -174,10 +177,7 @@ def __data_gen(file_list, label_list, training=False, model_type='evnet'):
         image_data, _ = __transform_img(image_data, affine, (128, 128, 128))
         image_data = np.expand_dims(image_data, -1)
         label_data, _ = __transform_img(label_data, affine, (128, 128, 128))
-        if model_type == 'vnet':
-            yield (image_data, label_data)
-        else:
-            yield ({"input_1": image_data, "input_2": resize(image_data, (64, 64, 64, 1)), "input_3": resize(image_data, (32, 32, 32, 1)), "input_4": resize(image_data, (16, 16, 16, 1)), "input_5": resize(image_data, (8, 8, 8, 1))}, label_data)
+        yield ({"input_1": image_data, "input_2": resize(image_data, (64, 64, 64, 1)), "input_3": resize(image_data, (32, 32, 32, 1)), "input_4": resize(image_data, (16, 16, 16, 1)), "input_5": resize(image_data, (8, 8, 8, 1))}, label_data)
 
 
 class dice_coef(tf.keras.losses.Loss):
@@ -226,7 +226,7 @@ def create_dataset(files, labels, training='False', batch_size=2):
     
     
     ds = tf.data.Dataset.from_generator(
-    lambda: __data_gen(files, labels, training=training, model_type=model_type),
+    lambda: __data_gen(files, labels, training=training),
     output_types=output_types,
     output_shapes=output_shapes
     )
@@ -235,8 +235,40 @@ def create_dataset(files, labels, training='False', batch_size=2):
 
     return ds
 
-   
+# two loss functions
+class dice_coef(tf.keras.losses.Loss):
+    def call(self, y_true, y_pred):
+        y_pred = tf.cast(y_pred, tf.float32)
+        y_true = tf.cast(y_true, y_pred.dtype)
+        pred_ssum = tf.math.reduce_sum(tf.math.square(y_pred), (1, 2, 3))
+        target_ssum = tf.math.reduce_sum(tf.math.square(y_true), (1, 2, 3))
+        mul_sum = tf.math.reduce_sum(tf.math.multiply_no_nan(y_pred, y_true), (1, 2, 3))
+        
+        res = tf.math.divide_no_nan(-2 * mul_sum, tf.math.add(pred_ssum, target_ssum))
+        return 1 + res
 
+class comb_loss(tf.keras.losses.Loss):
+    def call(self, y_true, y_pred):
+        y_pred = tf.cast(y_pred, tf.float32)
+        before_mask = y_pred[..., 2]
+        after_mask = y_pred[..., 0]
+        y_true = tf.cast(y_true, y_pred.dtype)
+        pred_ssum = tf.math.reduce_sum(tf.math.square(after_mask), (1, 2, 3))
+        target_ssum = tf.math.reduce_sum(tf.math.square(y_true), (1, 2, 3))
+        mul_sum = tf.math.reduce_sum(tf.math.multiply_no_nan(after_mask, y_true), (1, 2, 3))
+        res = tf.clip_by_value(1 + tf.math.divide_no_nan(-2 * mul_sum, tf.math.add(pred_ssum, target_ssum)), 0, 1)
+
+        shape = tf.shape(y_true)
+        flat_before = tf.reshape(before_mask, (shape[0], shape[1] * shape[2] * shape[3]))
+        flat_after = tf.reshape(after_mask, (shape[0], shape[1] * shape[2] * shape[3]))
+        pred_ssum = tf.math.reduce_sum(tf.math.square(before_mask), (1, 2, 3))
+        target_ssum = tf.math.reduce_sum(tf.math.square(after_mask), (1, 2, 3))
+        mul_sum = tf.math.reduce_sum(tf.math.multiply_no_nan(before_mask, after_mask), (1, 2, 3))
+        res2 = tf.clip_by_value(1 + tf.math.divide_no_nan(-2 * mul_sum, tf.math.add(pred_ssum, target_ssum)), 0, 1)
+
+        return res - res2 * 0.001   
+
+# metrics that were used to evaluate the model
 class dice_coef_real(tf.keras.metrics.Metric):
 
     def __init__(self, name='dice_coef_real', **kwargs):
@@ -326,7 +358,7 @@ def load_model(MODEL_SCALE = 16, DROP_R = 0.5, version='trained', model_type='ev
             return tf.reduce_sum(inputs, axis=-1, keepdims=True)
 
     def _diagonal_initializer(shape, *ignored, **ignored_too):
-    return np.eye(shape[0], shape[1], dtype=np.float32)
+        return np.eye(shape[0], shape[1], dtype=np.float32)
 
 
     def _potts_model_initializer(shape, *ignored, **ignored_too):
@@ -416,6 +448,9 @@ def load_model(MODEL_SCALE = 16, DROP_R = 0.5, version='trained', model_type='ev
             return input_shape
 
     if version != 'trained':
+
+        initializer = tf.keras.initializers.HeNormal()
+
         # input and encoder block1      
         inputs = tf.keras.Input(shape=(128, 128, 128, 1))
         raw_input_2 = tf.keras.Input(shape=(64, 64, 64, 1))
@@ -590,14 +625,18 @@ def load_model(MODEL_SCALE = 16, DROP_R = 0.5, version='trained', model_type='ev
                             num_iterations=20,
                             name='crfrnn')([pred, crf_input])
         output = layers.Softmax()(output)
-
-        model = Model({"input_1":inputs, "input_2":raw_input_2, "input_3":raw_input_3, "input_4":raw_input_4, "input_5":raw_input_5}, output[..., 0])
+        if model_type == 'evac_plus':
+            ori_output = layers.Softmax()(pred)
+            output = layers.Concatenate()([output, ori_output])
+            model = Model({"input_1":inputs, "input_2":raw_input_2, "input_3":raw_input_3, "input_4":raw_input_4, "input_5":raw_input_5}, output)
+        else:
+            model = Model({"input_1":inputs, "input_2":raw_input_2, "input_3":raw_input_3, "input_4":raw_input_4, "input_5":raw_input_5}, output[..., 0])
         return model
 
     if model_type == 'evac':
-        model = tf.keras.models.load_model('trained_model/evac/', custom_objects={'dice_coef': dice_coef})
+        model = tf.keras.models.load_model('trained_models/evac/', custom_objects={'dice_coef': dice_coef})
     elif model_type == 'evac_plus':
-        model = tf.keras.models.load_model('trained_model/evac_plus/', custom_objects={'comb_loss': comb_loss, 'dice_coef_orig': dice_coef_orig, 'dice_coef_real': dice_coef_real, 'dice_coef_comp': dice_coef_comp})
+        model = tf.keras.models.load_model('trained_models/evac_plus/', custom_objects={'comb_loss': comb_loss, 'dice_coef_orig': dice_coef_orig, 'dice_coef_real': dice_coef_real, 'dice_coef_comp': dice_coef_comp})
     elif model_type == 'user':
         try:
             model = tf.keras.models.load_model(base_path, custom_objects={'dice_coef': dice_coef})
@@ -616,7 +655,10 @@ def test_model(model, input_dir, output_dir, batch_size=1):
                   "input_5": resize(image_data, (inputs.shape[0], 8, 8, 8, 1))}
 
         prediction = model.predict(inputs)
-        pred_output = np.reshape(prediction, (128,128,128))       
+        try:
+            pred_output = np.reshape(prediction, (128,128,128))
+        except:
+            pred_output = np.reshape(prediction[..., 0], (128,128,128))
 
         pred_output, old_affine = __recover(pred_output, new_affine, shape)
         i = np.where(pred_output >= 0.5)
@@ -670,38 +712,7 @@ def test_model(model, input_dir, output_dir, batch_size=1):
         file_names = []
         idx = 0
 
-def train_model(model, train_ds, val_ds = None, pre_trained=False, model_type='evac_plus', model_path, batch_size=1, l_r=0.01, l2_w=0.001):
-    class dice_coef(tf.keras.losses.Loss):
-        def call(self, y_true, y_pred):
-            y_pred = tf.cast(y_pred, tf.float32)
-            y_true = tf.cast(y_true, y_pred.dtype)
-            pred_ssum = tf.math.reduce_sum(tf.math.square(y_pred), (1, 2, 3))
-            target_ssum = tf.math.reduce_sum(tf.math.square(y_true), (1, 2, 3))
-            mul_sum = tf.math.reduce_sum(tf.math.multiply_no_nan(y_pred, y_true), (1, 2, 3))
-            
-            res = tf.math.divide_no_nan(-2 * mul_sum, tf.math.add(pred_ssum, target_ssum))
-            return 1 + res
-
-    class comb_loss(tf.keras.losses.Loss):
-        def call(self, y_true, y_pred):
-            y_pred = tf.cast(y_pred, tf.float32)
-            before_mask = y_pred[..., 2]
-            after_mask = y_pred[..., 0]
-            y_true = tf.cast(y_true, y_pred.dtype)
-            pred_ssum = tf.math.reduce_sum(tf.math.square(after_mask), (1, 2, 3))
-            target_ssum = tf.math.reduce_sum(tf.math.square(y_true), (1, 2, 3))
-            mul_sum = tf.math.reduce_sum(tf.math.multiply_no_nan(after_mask, y_true), (1, 2, 3))
-            res = tf.clip_by_value(1 + tf.math.divide_no_nan(-2 * mul_sum, tf.math.add(pred_ssum, target_ssum)), 0, 1)
-
-            shape = tf.shape(y_true)
-            flat_before = tf.reshape(before_mask, (shape[0], shape[1] * shape[2] * shape[3]))
-            flat_after = tf.reshape(after_mask, (shape[0], shape[1] * shape[2] * shape[3]))
-            pred_ssum = tf.math.reduce_sum(tf.math.square(before_mask), (1, 2, 3))
-            target_ssum = tf.math.reduce_sum(tf.math.square(after_mask), (1, 2, 3))
-            mul_sum = tf.math.reduce_sum(tf.math.multiply_no_nan(before_mask, after_mask), (1, 2, 3))
-            res2 = tf.clip_by_value(1 + tf.math.divide_no_nan(-2 * mul_sum, tf.math.add(pred_ssum, target_ssum)), 0, 1)
-
-            return res - res2 * l2_w
+def train_model(model, train_ds, val_ds = None, pre_trained=False, model_type='evac_plus', model_path=None, batch_size=1, l_r=0.01, epochs=9):
 
     if pre_trained == False:
         optimizer = tf.keras.optimizers.Adam(l_r)
@@ -721,9 +732,9 @@ def train_model(model, train_ds, val_ds = None, pre_trained=False, model_type='e
     ]
 
     if val_ds != None:
-        model.fit(x=train_ds, epochs=EPOCHS, callbacks=callbacks)
+        model.fit(x=train_ds, epochs=epochs, callbacks=callbacks)
     else:
-        model.fit(x=train_ds, validation_data = val_ds, epochs=EPOCHS, callbacks=callbacks)
+        model.fit(x=train_ds, validation_data = val_ds, epochs=epochs, callbacks=callbacks)
     model.load_weights(checkpoint_path)
     model.save(model_path, save_format='tf')
     
