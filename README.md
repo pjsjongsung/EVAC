@@ -8,13 +8,15 @@ Files were copied for convenience.
 
 Please follow the instructions of that repo which is also written below.
 
-====================================================
+===================================================
+
 To compile the code run:
 ````
 sh build.sh
 ````
 
 See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/permutohedral_lattice) for more information on compilation for different image types.
+
 ====================================================
 
 Just running the command should be enough to run the model.
