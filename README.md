@@ -1,5 +1,5 @@
 # EVAC+
-This is a repository to run EVAC+: Multi-scale V-net with Deep Feature CRF Layers for Brain Extraction
+This is a repository to run [EVAC+: Multi-scale V-net with Deep Feature CRF Layers for Brain Extraction](https://arxiv.org/abs/2206.02837)
 
 ## Pre-requisites
 
