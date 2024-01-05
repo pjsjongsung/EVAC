@@ -11,10 +11,13 @@ Please follow the instructions of that repo which is also written below.
 
 ===================================================
 
+In permutohedral_lattice/CMakeLists.txt, set the path to the **libtensorflow_framework.so** file in line 8.
+
 To compile the code run:
 ````
 sh build.sh
 ````
+Running the above command in the main folder gives you **lattice_filter.so** file.
 
 See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/permutohedral_lattice) for more information on compilation for different image types.
 
