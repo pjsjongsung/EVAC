@@ -27,8 +27,6 @@ See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/
 
 Just running the command should be enough to run the model.
 
-Due to the constraints of the implemented CRFasRNNLayer, the model is limited to a Tensorflow version of 2.3.0, which will be edited later to remove this constraint.
-
 ## Examples
 
 Please refer to [training.ipynb](training.ipynb) and [testing.ipynb](testing.ipynb).
