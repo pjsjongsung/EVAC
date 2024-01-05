@@ -11,13 +11,15 @@ Please follow the instructions of that repo which is also written below.
 
 ===================================================
 
-In permutohedral_lattice/CMakeLists.txt, set the path to the **libtensorflow_framework.so** file in line 8.
+Add the correct paths to **nvcc, g++ and CUDA/Include** in build.sh file found inside **permutohedral_lattice** folder. (lines 8, 9, and 10).
 
-To compile the code run:
+Also add the path to **libtensorflow_framework.so** file in CMakeLists.txt file that is found in **permutohedral_lattice** folder. (line 8).
+
+Then compile the code using:
 ````
 sh build.sh
 ````
-Running the above command in the main folder gives you **lattice_filter.so** file.
+Running the above command in the main folder gives you **lattice_filter.so** file. Please make sure that this file is present. If not, the models.py code would throw errors.
 
 See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/permutohedral_lattice) for more information on compilation for different image types.
 

@@ -5,9 +5,9 @@ mkdir build_dir
 cd build_dir
 
 
-CUDA_COMPILER=/N/soft/sles15/cuda/11.7/bin/nvcc
-CXX_COMPILER=/N/soft/rhel8/gcc/11.2.0/bin/g++
-CUDA_INCLUDE=/N/soft/sles15/cuda/11.7/include
+CUDA_COMPILER='path_to_cuda_nvcc'
+CXX_COMPILER='path_to_gcc'
+CUDA_INCLUDE='path_to_cuda_include'
 
 SPATIAL_DIMS=3
 INPUT_CHANNELS=2
