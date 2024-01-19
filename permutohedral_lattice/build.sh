@@ -5,9 +5,9 @@ mkdir build_dir
 cd build_dir
 
 
-CUDA_COMPILER=/N/soft/rhel7/cuda/10.2/bin/nvcc
-CXX_COMPILER=/N/soft/rhel7/gcc/8.4.0/bin/g++
-CUDA_INCLUDE=/N/soft/rhel7/cuda/10.2/include
+CUDA_COMPILER='path_to_cuda_nvcc'
+CXX_COMPILER='path_to_gcc'
+CUDA_INCLUDE='path_to_cuda_include'
 
 SPATIAL_DIMS=3
 INPUT_CHANNELS=2
@@ -22,7 +22,6 @@ cmake -DCMAKE_BUILD_TYPE=Debug -D CMAKE_CUDA_COMPILER=${CUDA_COMPILER} \
                                -D INPUT_CHANNELS=${INPUT_CHANNELS} \
                                -D REFERENCE_CHANNELS=${REFERENCE_CHANNELS} \
                                -D MAKE_TESTS=${MAKE_TESTS} \
-			       -V \
                                -G "CodeBlocks - Unix Makefiles" ../
 
 
@@ -31,4 +30,3 @@ make
 cp lattice_filter.so ../
 cd ..
 rm -r build_dir
-

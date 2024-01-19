@@ -39,7 +39,7 @@ REGISTER_OP("LatticeFilter")
         .Output("output: T")
         .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
             c->set_output(0, c->input(0));
-            return Status::OK();
+            return tensorflow::OkStatus();
         });
 
 

@@ -11,10 +11,25 @@ Please follow the instructions of that repo which is also written below.
 
 ===================================================
 
-To compile the code run:
+Add the correct paths to **nvcc, g++ and CUDA/Include** in build.sh file found inside **permutohedral_lattice** folder. (lines 8, 9, and 10).
+
+Create a symlink using the following code so that **libtensorflow_framework.so** points to **libtensorflow_framework.so.2**:
+
+For linux and MacOS:
+```
+ln -s path_to_libtensorflow_framework.so.2 path_to_libtensorflow_framework.so
+```
+
+For windows:
+```
+mklink path_to_libtensorflow_framework.so.2 path_to_libtensorflow_framework.so
+```
+
+Then compile the code using:
 ````
 sh build.sh
 ````
+Running the above command in the main folder gives you **lattice_filter.so** file. Please make sure that this file is present. If not, the models.py code would throw errors.
 
 See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/permutohedral_lattice) for more information on compilation for different image types.
 
@@ -22,7 +37,7 @@ See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/
 
 Just running the command should be enough to run the model.
 
-Due to the constraints of the implemented CRFasRNNLayer, the model is limited to a Tensorflow version of 2.3.0, which will be edited later to remove this constraint.
+We have currently tested the code only on Ubuntu. However, the code should work in Windows as well. 
 
 ## Examples
 
