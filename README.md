@@ -13,7 +13,11 @@ Please follow the instructions of that repo which is also written below.
 
 Add the correct paths to **nvcc, g++ and CUDA/Include** in build.sh file found inside **permutohedral_lattice** folder. (lines 8, 9, and 10).
 
-Also add the path to **libtensorflow_framework.so** file in CMakeLists.txt file that is found in **permutohedral_lattice** folder. (line 8).
+Create a symlink using the following code so that **libtensorflow_framework.so** points to **libtensorflow_framework.so.2**:
+
+```
+ln -s path_to_libtensorflow_framework.so.2 path_to_libtensorflow_framework.so
+```
 
 Then compile the code using:
 ````

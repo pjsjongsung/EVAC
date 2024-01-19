@@ -5,7 +5,7 @@ project(permutohedral_lattice LANGUAGES CXX CUDA)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 17)
 set(CUDA_SEPARABLE_COMPILATION ON)
-set(TENSORFLOW_FRAMEWORK "path_to_libtensorflow_framework.so")
+# set(TENSORFLOW_FRAMEWORK "path_to_libtensorflow_framework.so")
 
 if(UNIX AND NOT APPLE)
     set(LINUX TRUE)
