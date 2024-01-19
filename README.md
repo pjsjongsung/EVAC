@@ -15,8 +15,14 @@ Add the correct paths to **nvcc, g++ and CUDA/Include** in build.sh file found i
 
 Create a symlink using the following code so that **libtensorflow_framework.so** points to **libtensorflow_framework.so.2**:
 
+For linux and MacOS:
 ```
 ln -s path_to_libtensorflow_framework.so.2 path_to_libtensorflow_framework.so
+```
+
+For windows:
+```
+mklink path_to_libtensorflow_framework.so.2 path_to_libtensorflow_framework.so
 ```
 
 Then compile the code using:
@@ -30,6 +36,8 @@ See the nested module [permutohedral_lattice](https://github.com/MiguelMonteiro/
 ====================================================
 
 Just running the command should be enough to run the model.
+
+We have currently tested the code only on Ubuntu. However, the code should work in Windows as well. 
 
 ## Examples
 
